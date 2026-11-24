@@ -55,7 +55,3 @@ Colección de 97 animaciones de texto hechas con [GSAP](https://gsap.com/). Cada
 ## Ver la web en local
 
 Abre `index.html` en el navegador. No necesita instalación.
-
-## Publicar con GitHub Pages
-
-En el repositorio: **Settings → Pages → Source: Deploy from a branch → Branch: `main` / `(root)` → Save**. En uno o dos minutos la web aparece en la dirección de arriba.
