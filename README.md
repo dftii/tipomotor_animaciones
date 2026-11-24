@@ -2,6 +2,8 @@
 
 Colección de 57 animaciones de texto hechas con [GSAP](https://gsap.com/). Cada efecto tiene vista previa en directo, botón para repetirlo, código visible y botón para copiarlo.
 
+**Funciones:** escribe tu propio texto y míralo animado, cambia la velocidad (0,5× / 1× / 2×), amplía cualquier efecto en grande, guarda favoritos (se recuerdan en tu navegador), filtra por categoría y busca por nombre.
+
 **Web publicada:** https://dftii.github.io/tipomotor_animaciones/
 
 ## Categorías

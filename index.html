@@ -154,6 +154,19 @@ dialog#vista::backdrop{background:rgba(8,11,23,.72); backdrop-filter:blur(4px)}
     <h1 id="logo">Tipomotor<span class="dot">.</span></h1>
     <p>Efectos de texto listos para usar en tus webs. <strong>Cada tarjeta muestra el efecto en directo</strong>: pulsa <em>Repetir</em> para verlo otra vez, <em>Código</em> para leerlo y <em>Copiar</em> para llevártelo.</p>
     <div class="stack"><span>GSAP 3</span><span>SplitText</span><span>ScrollTrigger</span><span id="total">—</span></div>
+    <div class="tools">
+      <div class="field">
+        <label for="mitexto">Tu texto</label>
+        <input id="mitexto" type="text" maxlength="28" placeholder="Escribe tu frase y mírala animada" autocomplete="off">
+      </div>
+      <div class="field">
+        <span class="lbl" id="vel-l">Velocidad</span>
+        <div class="seg" id="vel" role="group" aria-labelledby="vel-l">
+          <button type="button" data-v="0.5">0,5×</button><button type="button" data-v="1">1×</button><button type="button" data-v="2">2×</button>
+        </div>
+      </div>
+      <button class="btn" id="replay-all" type="button">↻ Repetir los visibles</button>
+    </div>
   </header>
 
   <nav class="bar" aria-label="Filtrar efectos">
@@ -192,6 +205,17 @@ dialog#vista::backdrop{background:rgba(8,11,23,.72); backdrop-filter:blur(4px)}
   </section>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+<dialog id="vista" aria-labelledby="vista-t">
+  <div class="stage"><div class="target"></div></div>
+  <div class="vbar">
+    <h3 id="vista-t"></h3>
+    <div class="actions" style="padding:0">
+      <button class="btn primary" id="v-play" type="button">↻ Repetir</button>
+      <button class="btn" id="v-copy" type="button">Copiar código</button>
+      <button class="btn" id="v-close" type="button">Cerrar</button>
+    </div>
+  </div>
+</dialog>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
@@ -432,18 +456,24 @@ function highlight(code){
     .replace(/(&quot;|")([^"\n]*?)"/g, '<span class="s">"$2"</span>')
     .replace(/\b(gsap|SplitText|const|return)\b/g, '<span class="k">$1</span>');
 }
+let favs = new Set();
+try { favs = new Set(JSON.parse(localStorage.getItem('tipomotor-favs') || '[]')); } catch (_) {}
+const saveFavs = () => { try { localStorage.setItem('tipomotor-favs', JSON.stringify([...favs])); } catch (_) {} };
+CATS.push(['favs', '★ Favoritos']);
 FX.forEach((fx, i) => {
+  fx.custom = fx.cat !== 'parrafo' && !['Paralaje', 'Contador', 'Cambio de palabra', 'Escribir y borrar'].includes(fx.name);
   fx.text = fx.text || fx.name;
   const n = String(i + 1).padStart(2, '0');
   const card = document.createElement('article');
   card.className = 'card'; card.dataset.cat = fx.cat; card.dataset.name = fx.name.toLowerCase();
   card.innerHTML = `
     <div class="stage" data-n="${n}"><div class="target${fx.cat === 'parrafo' || (fx.scroll && fx.text.length > 40) ? ' p' : ''}"></div>${fx.scroll ? '<span class="hint">Se mueve al hacer scroll</span>' : ''}</div>
-    <div class="meta"><h3>${fx.name}</h3><span class="tag">${catLabel[fx.cat]}</span></div>
+    <div class="meta"><h3>${fx.name}</h3><div class="r"><span class="tag">${catLabel[fx.cat]}</span><button class="fav" data-a="fav" aria-pressed="${favs.has(fx.name)}" aria-label="Guardar ${fx.name} en favoritos">${favs.has(fx.name) ? '★' : '☆'}</button></div></div>
     <div class="actions">
       <button class="btn primary" data-a="play" aria-label="Repetir ${fx.name}">↻ Repetir</button>
       <button class="btn" data-a="code" aria-expanded="false">Código</button>
       <button class="btn" data-a="copy">Copiar</button>
+      ${fx.scroll ? '' : '<button class="btn" data-a="zoom">⤢ Ampliar</button>'}
     </div>
     <div class="code" hidden><pre><code>${highlight(fx.code)}</code></pre></div>`;
   card.querySelector('.target').textContent = fx.text;
@@ -453,19 +483,24 @@ FX.forEach((fx, i) => {
 const empty = document.createElement('p'); empty.className = 'empty'; empty.hidden = true; grid.appendChild(empty);
 document.getElementById('total').textContent = FX.length + ' efectos';
 
-function play(fx){
-  const st = fx.card.querySelector('.stage'), el = st.querySelector('.target');
-  if (fx.anim){ fx.anim.scrollTrigger && fx.anim.scrollTrigger.kill(); fx.anim.kill(); }
+let custom = '';
+const txt = fx => (fx.custom && custom) ? custom : fx.text;
+function reset(fx, st, prev){
+  const el = st.querySelector('.target');
+  if (prev){ prev.scrollTrigger && prev.scrollTrigger.kill(); prev.kill(); }
   gsap.set([st, el], { clearProps:'all' });
   el.classList.remove('fill');
-  el.textContent = fx.text;
-  fx.anim = fx.run(el, st);
-  fx.played = true;
+  el.textContent = txt(fx);
+  return el;
 }
+function runIn(fx, st, prev){ const el = reset(fx, st, prev); return fx.run(el, st); }
+function play(fx){ fx.anim = runIn(fx, fx.card.querySelector('.stage'), fx.anim); fx.played = true; }
+const onScreen = el => { const r = el.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight; };
 
 /* reproducir al entrar en pantalla */
+let io = null;
 if (!reduce && 'IntersectionObserver' in window){
-  const io = new IntersectionObserver(es => es.forEach(e => {
+  io = new IntersectionObserver(es => es.forEach(e => {
     if (e.isIntersecting){ const fx = e.target._fx; io.unobserve(e.target); if (!fx.played) play(fx); }
   }), { threshold:.45 });
   FX.forEach(fx => io.observe(fx.card));
@@ -477,6 +512,13 @@ function say(msg){ toast.textContent = msg; toast.classList.add('on'); clearTime
 grid.addEventListener('click', e => {
   const b = e.target.closest('button[data-a]'); if (!b) return;
   const card = b.closest('.card'), fx = card._fx, box = card.querySelector('.code');
+  if (b.dataset.a === 'fav'){
+    favs.has(fx.name) ? favs.delete(fx.name) : favs.add(fx.name); saveFavs();
+    const on = favs.has(fx.name); b.setAttribute('aria-pressed', String(on)); b.textContent = on ? '★' : '☆';
+    say(on ? '«' + fx.name + '» guardado en favoritos' : '«' + fx.name + '» quitado de favoritos');
+    apply();
+  }
+  if (b.dataset.a === 'zoom') openView(fx);
   if (b.dataset.a === 'play'){ play(fx); if (fx.scroll){ ScrollTrigger.refresh(); say('Desplázate para ver el efecto'); } }
   if (b.dataset.a === 'code'){ box.hidden = !box.hidden; b.setAttribute('aria-expanded', String(!box.hidden)); b.textContent = box.hidden ? 'Código' : 'Ocultar'; }
   if (b.dataset.a === 'copy'){
@@ -492,21 +534,79 @@ try { const saved = localStorage.getItem('tipomotor-cat'); if (saved && catLabel
 const chips = document.getElementById('chips');
 CATS.forEach(([id, label]) => {
   const c = document.createElement('button'); c.className = 'chip'; c.dataset.cat = id;
-  const n = id === 'todos' ? FX.length : FX.filter(f => f.cat === id).length;
+  const n = id === 'todos' ? FX.length : id === 'favs' ? favs.size : FX.filter(f => f.cat === id).length;
   c.innerHTML = `${label}<small>${n}</small>`; chips.appendChild(c);
 });
 function apply(){
   let shown = 0;
   chips.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', String(c.dataset.cat === cat)));
-  FX.forEach(fx => { const ok = (cat === 'todos' || fx.cat === cat) && fx.card.dataset.name.includes(q); fx.card.hidden = !ok; if (ok) shown++; });
+  chips.querySelector('[data-cat="favs"] small').textContent = favs.size;
+  FX.forEach(fx => {
+    const inCat = cat === 'todos' || (cat === 'favs' ? favs.has(fx.name) : fx.cat === cat);
+    const ok = inCat && fx.card.dataset.name.includes(q); fx.card.hidden = !ok; if (ok) shown++;
+  });
   document.getElementById('count').textContent = shown + ' de ' + FX.length;
   empty.hidden = shown > 0;
-  if (!shown) empty.textContent = q ? `Ningún efecto coincide con «${q}». Prueba otra palabra o elige «Todos».` : 'No hay efectos en esta categoría.';
+  if (!shown) empty.textContent = q ? `Ningún efecto coincide con «${q}». Prueba otra palabra o elige «Todos».`
+    : cat === 'favs' ? 'Aún no tienes favoritos. Pulsa ☆ en cualquier efecto para guardarlo aquí.' : 'No hay efectos en esta categoría.';
   ScrollTrigger.refresh();
 }
 chips.addEventListener('click', e => { const c = e.target.closest('.chip'); if (!c) return; cat = c.dataset.cat; try { localStorage.setItem('tipomotor-cat', cat); } catch (_) {} apply(); });
 document.getElementById('buscar').addEventListener('input', e => { q = e.target.value.trim().toLowerCase(); apply(); });
 apply();
+
+/* texto personalizado */
+let tCustom;
+document.getElementById('mitexto').addEventListener('input', e => {
+  clearTimeout(tCustom);
+  tCustom = setTimeout(() => {
+    custom = e.target.value.trim();
+    FX.filter(f => f.custom && !f.scroll).forEach(fx => {
+      if (fx.card.hidden) return;
+      if (onScreen(fx.card)) play(fx);
+      else { reset(fx, fx.card.querySelector('.stage'), fx.anim); fx.anim = null; fx.played = false; if (io) io.observe(fx.card); }
+    });
+    FX.filter(f => f.custom && f.scroll).forEach(play);
+    if (vfx && dlg.open) vanim = runIn(vfx, vst, vanim);
+  }, 350);
+});
+
+/* velocidad */
+const vel = document.getElementById('vel');
+let speed = 1;
+try { const s = parseFloat(localStorage.getItem('tipomotor-vel')); if ([0.5, 1, 2].includes(s)) speed = s; } catch (_) {}
+function setSpeed(v){
+  speed = v; gsap.globalTimeline.timeScale(v);
+  vel.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(parseFloat(b.dataset.v) === v)));
+  try { localStorage.setItem('tipomotor-vel', String(v)); } catch (_) {}
+}
+vel.addEventListener('click', e => { const b = e.target.closest('button'); if (b) setSpeed(parseFloat(b.dataset.v)); });
+setSpeed(speed);
+
+/* repetir los visibles */
+document.getElementById('replay-all').addEventListener('click', () => {
+  let n = 0; FX.forEach(fx => { if (!fx.scroll && !fx.card.hidden && onScreen(fx.card)){ play(fx); n++; } });
+  say(n ? `Repitiendo ${n} efecto${n > 1 ? 's' : ''}` : 'No hay efectos en pantalla');
+});
+
+/* vista ampliada */
+const dlg = document.getElementById('vista'), vst = dlg.querySelector('.stage');
+let vfx = null, vanim = null;
+function openView(fx){
+  vfx = fx;
+  document.getElementById('vista-t').textContent = fx.name;
+  vst.querySelector('.target').className = 'target' + (fx.cat === 'parrafo' ? ' p' : '');
+  if (typeof dlg.showModal === 'function') dlg.showModal(); else dlg.setAttribute('open', '');
+  vanim = runIn(fx, vst, vanim);
+}
+document.getElementById('v-play').addEventListener('click', () => { if (vfx) vanim = runIn(vfx, vst, vanim); });
+document.getElementById('v-close').addEventListener('click', () => dlg.close());
+document.getElementById('v-copy').addEventListener('click', () => {
+  try { navigator.clipboard.writeText(vfx.code).then(() => say('Código de «' + vfx.name + '» copiado'), () => say('No se pudo copiar. Usa el botón Código de la tarjeta.')); }
+  catch (_) { say('No se pudo copiar. Usa el botón Código de la tarjeta.'); }
+});
+dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
+dlg.addEventListener('close', () => { if (vanim){ vanim.kill(); vanim = null; } });
 
 /* los efectos de scroll se preparan desde el principio */
 FX.filter(f => f.scroll).forEach(play);
