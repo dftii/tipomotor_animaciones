@@ -1,6 +1,6 @@
 # Tipomotor · animaciones de texto con GSAP
 
-Colección de 57 animaciones de texto hechas con [GSAP](https://gsap.com/). Cada efecto tiene vista previa en directo, botón para repetirlo, código visible y botón para copiarlo.
+Colección de 97 animaciones de texto hechas con [GSAP](https://gsap.com/). Cada efecto tiene vista previa en directo, botón para repetirlo, código visible y botón para copiarlo.
 
 **Funciones:**
 
@@ -18,13 +18,14 @@ Colección de 57 animaciones de texto hechas con [GSAP](https://gsap.com/). Cada
 
 | Categoría | Efectos |
 |---|---|
-| Entrada | 11 |
-| Por letra | 11 |
-| Cinética | 11 |
-| Glitch y digital | 7 |
-| Creativo | 7 |
-| Párrafo | 7 |
-| Scroll | 3 |
+| Entrada | 16 |
+| Por letra | 19 |
+| Cinética | 16 |
+| Glitch y digital | 12 |
+| Creativo | 12 |
+| Párrafo | 11 |
+| Scroll | 6 |
+| Interactivo (reaccionan al ratón y a los clics) | 5 |
 
 ## Cómo usar un efecto en otro proyecto
 

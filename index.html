@@ -104,6 +104,9 @@ dialog#vista::backdrop{background:rgba(8,11,23,.72); backdrop-filter:blur(4px)}
 .target .bar-red{position:absolute; inset:.12em -.12em .08em; background:var(--stage-fg); transform-origin:right center; border-radius:2px}
 .target .mk{background-image:linear-gradient(var(--hot), var(--hot)); background-repeat:no-repeat; background-position:0 88%; background-size:100% 38%; color:var(--stage-fg)}
 .target.fill{color:transparent; -webkit-background-clip:text; background-clip:text; background-image:linear-gradient(to top, var(--hot) 50%, rgba(242,239,232,.16) 50%); background-size:100% 200%; background-position:0% 100%}
+.target.grad{color:transparent; -webkit-background-clip:text; background-clip:text; background-image:linear-gradient(90deg, var(--stage-fg), var(--hot), var(--sky), var(--stage-fg)); background-size:300% 100%}
+.target.stroke{-webkit-text-stroke:1.5px var(--stage-fg)}
+.target .blk{position:absolute; inset:0 -.08em; background:var(--hot); transform:scaleX(0)}
 .target .cursor{display:inline-block; margin-left:2px; color:var(--hot); animation:blink 1s steps(1) infinite}
 @keyframes blink{50%{opacity:0}}
 .target .swapbox{display:inline-block; overflow:hidden; vertical-align:bottom; color:var(--hot)}
@@ -255,6 +258,10 @@ function lines(el){
   return out;
 }
 const GLYPHS = 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ#%&*/<>';
+function live(st, handlers){
+  const on = Object.entries(handlers); on.forEach(([ev, fn]) => st.addEventListener(ev, fn));
+  return { kill(){ on.forEach(([ev, fn]) => st.removeEventListener(ev, fn)); }, isActive: () => false };
+}
 function scramble(el, final, { chars = GLYPHS, duration = 1.5 } = {}){
   const o = { p: 0 };
   return gsap.to(o, { p: 1, duration, ease: 'none', onUpdate(){
@@ -276,10 +283,11 @@ function untype(span, cps = 26){
 /* ---------- catálogo ---------- */
 const CATS = [
   ['todos', 'Todos'], ['entrada', 'Entrada'], ['letra', 'Por letra'], ['cinetica', 'Cinética'],
-  ['glitch', 'Glitch y digital'], ['creativo', 'Creativo'], ['parrafo', 'Párrafo'], ['scroll', 'Scroll']
+  ['glitch', 'Glitch y digital'], ['creativo', 'Creativo'], ['parrafo', 'Párrafo'], ['scroll', 'Scroll'], ['interactivo', 'Interactivo']
 ];
 const SPLIT = t => `const split = SplitText.create(".titulo", { type: "${t}" });\n`;
 const P1 = 'Las animaciones de texto guían la mirada, marcan el ritmo de lectura y hacen que una página se sienta viva sin distraer del mensaje.';
+const P3 = 'Cada palabra entra en su momento. El lector no se da cuenta del truco, pero nota que el texto respira y se lee con más ganas.';
 const P2 = 'Un buen efecto dura menos de un segundo, acompaña al contenido y desaparece. Si el lector lo nota más que el texto, sobra.';
 
 const FX = [
@@ -454,6 +462,144 @@ const FX = [
   code:`gsap.timeline({\n  scrollTrigger: { trigger: ".escena", start: "top bottom", end: "bottom top", scrub: true }\n})\n  .fromTo(".fondo",  { y: 50 },  { y: -50, ease: "none" }, 0)\n  .fromTo(".medio",  { y: 25 },  { y: -25, ease: "none" }, 0)\n  .fromTo(".frente", { y: -10 }, { y: 10,  ease: "none" }, 0);` },
 { name:'Letras con scroll', cat:'scroll', scroll:true, run: (el, st) => gsap.from(split(el,'chars').chars, { rotationX:90, opacity:0, transformPerspective:500, stagger:.05, ease:'none', scrollTrigger:{ trigger:st, start:'top 90%', end:'center 45%', scrub:true } }),
   code:SPLIT('chars')+`gsap.from(split.chars, {\n  rotationX: 90,\n  opacity: 0,\n  transformPerspective: 500,\n  stagger: 0.05,\n  ease: "none",\n  scrollTrigger: {\n    trigger: ".titulo",\n    start: "top 90%",\n    end: "center 45%",\n    scrub: true\n  }\n});` },
+/* ===== Nuevos efectos ===== */
+/* Entrada */
+{ name:'Desde la derecha', cat:'entrada', run: el => gsap.from(el, { x:200, opacity:0, duration:1, ease:'power2.out' }),
+  code:`gsap.from(".titulo", {\n  x: 200,\n  opacity: 0,\n  duration: 1,\n  ease: "power2.out"\n});` },
+{ name:'Subir revelado', cat:'entrada', run: el => gsap.fromTo(el, { y:40, clipPath:'inset(0% 0% 100% 0%)' }, { y:0, clipPath:'inset(0% 0% 0% 0%)', duration:.9, ease:'power4.out' }),
+  code:`gsap.fromTo(".titulo",\n  { y: 40, clipPath: "inset(0% 0% 100% 0%)" },\n  { y: 0, clipPath: "inset(0% 0% 0% 0%)", duration: 0.9, ease: "power4.out" }\n);` },
+{ name:'Caída 3D', cat:'entrada', run: el => gsap.from(el, { rotationX:-120, y:-60, opacity:0, transformOrigin:'50% 0%', transformPerspective:700, duration:1.2, ease:'power3.out' }),
+  code:`gsap.from(".titulo", {\n  rotationX: -120,\n  y: -60,\n  opacity: 0,\n  transformOrigin: "50% 0%",\n  transformPerspective: 700,\n  duration: 1.2,\n  ease: "power3.out"\n});` },
+{ name:'Expandir', cat:'entrada', run: el => gsap.from(el, { letterSpacing:'-0.6em', opacity:0, duration:1.1, ease:'power3.out' }),
+  code:`gsap.from(".titulo", {\n  letterSpacing: "-0.6em",\n  opacity: 0,\n  duration: 1.1,\n  ease: "power3.out"\n});` },
+{ name:'Desplegar', cat:'entrada', run: el => gsap.from(el, { scaleY:0, skewX:25, opacity:0, duration:.9, ease:'power4.out' }),
+  code:`gsap.from(".titulo", {\n  scaleY: 0,\n  skewX: 25,\n  opacity: 0,\n  duration: 0.9,\n  ease: "power4.out"\n});` },
+
+/* Por letra */
+{ name:'Ola de escala', cat:'letra', run: el => gsap.from(split(el,'chars').chars, { scale:0, y:20, stagger:{ each:.04, from:'edges' }, duration:.6, ease:'back.out(2)' }),
+  code:SPLIT('chars')+`gsap.from(split.chars, {\n  scale: 0,\n  y: 20,\n  stagger: { each: 0.04, from: "edges" },\n  duration: 0.6,\n  ease: "back.out(2)"\n});` },
+{ name:'Volteo por letra', cat:'letra', run: el => gsap.from(split(el,'chars').chars, { rotationY:-180, opacity:0, transformPerspective:500, stagger:.05, duration:.8, ease:'power2.out' }),
+  code:SPLIT('chars')+`gsap.from(split.chars, {\n  rotationY: -180,\n  opacity: 0,\n  transformPerspective: 500,\n  stagger: 0.05,\n  duration: 0.8,\n  ease: "power2.out"\n});` },
+{ name:'Lluvia', cat:'letra', run: el => gsap.from(split(el,'chars').chars, { y:-120, opacity:0, stagger:{ each:.05, from:'random' }, duration:.7, ease:'power2.in' }),
+  code:SPLIT('chars')+`gsap.from(split.chars, {\n  y: -120,\n  opacity: 0,\n  stagger: { each: 0.05, from: "random" },\n  duration: 0.7,\n  ease: "power2.in"\n});` },
+{ name:'Rodillo', cat:'letra', run: el => gsap.from(split(el,'chars').chars, { rotationX:360, opacity:0, transformOrigin:'50% 50% -30px', transformPerspective:500, stagger:.05, duration:1, ease:'power3.out' }),
+  code:SPLIT('chars')+`gsap.from(split.chars, {\n  rotationX: 360,\n  opacity: 0,\n  transformOrigin: "50% 50% -30px",\n  transformPerspective: 500,\n  stagger: 0.05,\n  duration: 1,\n  ease: "power3.out"\n});` },
+{ name:'Saltitos', cat:'letra', run: el => gsap.to(split(el,'chars').chars, { y:-22, duration:.25, ease:'power2.out', yoyo:true, repeat:1, stagger:.05 }),
+  code:SPLIT('chars')+`gsap.to(split.chars, {\n  y: -22,\n  duration: 0.25,\n  ease: "power2.out",\n  yoyo: true,\n  repeat: 1,\n  stagger: 0.05\n});` },
+{ name:'Zigzag', cat:'letra', run: el => gsap.from(split(el,'chars').chars, { y:i => i % 2 ? -60 : 60, opacity:0, stagger:.03, duration:.7, ease:'back.out(2)' }),
+  code:SPLIT('chars')+`gsap.from(split.chars, {\n  y: i => (i % 2 ? -60 : 60),\n  opacity: 0,\n  stagger: 0.03,\n  duration: 0.7,\n  ease: "back.out(2)"\n});` },
+{ name:'Tamaños locos', cat:'letra', run: el => gsap.from(split(el,'chars').chars, { scale:() => R(.2, 2.6), rotation:() => R(-40, 40), opacity:0, stagger:.03, duration:.9, ease:'elastic.out(1, 0.5)' }),
+  code:SPLIT('chars')+`gsap.from(split.chars, {\n  scale: () => gsap.utils.random(0.2, 2.6),\n  rotation: () => gsap.utils.random(-40, 40),\n  opacity: 0,\n  stagger: 0.03,\n  duration: 0.9,\n  ease: "elastic.out(1, 0.5)"\n});` },
+{ name:'Persiana por letra', cat:'letra', run: el => gsap.fromTo(split(el,'chars').chars, { clipPath:'inset(0% 0% 100% 0%)', y:-10 }, { clipPath:'inset(0% 0% 0% 0%)', y:0, stagger:.04, duration:.5, ease:'power2.out' }),
+  code:SPLIT('chars')+`gsap.fromTo(split.chars,\n  { clipPath: "inset(0% 0% 100% 0%)", y: -10 },\n  { clipPath: "inset(0% 0% 0% 0%)", y: 0, stagger: 0.04, duration: 0.5, ease: "power2.out" }\n);` },
+
+/* Cinética */
+{ name:'Sacudida', cat:'cinetica', run: el => gsap.timeline().set(el, { transformOrigin:'50% 100%' }).to(el, { keyframes:{ rotation:[0, -8, 6, -4, 2, 0] }, duration:.8, ease:'none' }),
+  code:`gsap.set(".titulo", { transformOrigin: "50% 100%" });\ngsap.to(".titulo", {\n  keyframes: { rotation: [0, -8, 6, -4, 2, 0] },\n  duration: 0.8,\n  ease: "none"\n});` },
+{ name:'Gelatina', cat:'cinetica', run: el => gsap.to(el, { keyframes:{ skewX:[0, -12, 10, -6, 3, 0], scaleY:[1, .9, 1.08, .96, 1.02, 1] }, duration:.9, ease:'none' }),
+  code:`gsap.to(".titulo", {\n  keyframes: {\n    skewX: [0, -12, 10, -6, 3, 0],\n    scaleY: [1, 0.9, 1.08, 0.96, 1.02, 1]\n  },\n  duration: 0.9,\n  ease: "none"\n});` },
+{ name:'Flotar', cat:'cinetica', run: el => gsap.to(el, { y:-16, duration:.8, yoyo:true, repeat:5, ease:'sine.inOut' }),
+  code:`gsap.to(".titulo", {\n  y: -16,\n  duration: 0.8,\n  yoyo: true,\n  repeat: -1, // flota sin parar\n  ease: "sine.inOut"\n});` },
+{ name:'Patinazo', cat:'cinetica', run: el => gsap.timeline()
+    .from(el, { x:-400, skewX:40, opacity:0, duration:.6, ease:'power3.out' })
+    .to(el, { skewX:-12, duration:.15 }).to(el, { skewX:0, duration:.6, ease:'elastic.out(1, 0.4)' }),
+  code:`gsap.timeline()\n  .from(".titulo", { x: -400, skewX: 40, opacity: 0, duration: 0.6, ease: "power3.out" })\n  .to(".titulo", { skewX: -12, duration: 0.15 })\n  .to(".titulo", { skewX: 0, duration: 0.6, ease: "elastic.out(1, 0.4)" });` },
+{ name:'Cartel colgado', cat:'cinetica', run: el => gsap.from(el, { rotation:30, transformOrigin:'0% 0%', duration:2, ease:'elastic.out(1, 0.25)' }),
+  code:`gsap.from(".titulo", {\n  rotation: 30,\n  transformOrigin: "0% 0%",\n  duration: 2,\n  ease: "elastic.out(1, 0.25)"\n});` },
+
+/* Glitch y digital */
+{ name:'Corrupción', cat:'glitch', run: el => scramble(el, el.textContent, { chars:'▓▒░█', duration:1.8 }),
+  code:`// Requiere ScrambleTextPlugin\nconst t = document.querySelector(".titulo");\ngsap.to(t, {\n  duration: 1.8,\n  scrambleText: { text: t.textContent, chars: "▓▒░█" }\n});` },
+{ name:'Interferencia', cat:'glitch', run: el => { const tl = gsap.timeline();
+    for (let i = 0; i < 10; i++) tl.to(el, { opacity:R(.1, 1), filter:`blur(${R(0, 6, .5)}px)`, x:R(-6, 6), duration:.05, ease:'none' });
+    return tl.to(el, { opacity:1, filter:'blur(0px)', x:0, duration:.15 }); },
+  code:`const tl = gsap.timeline();\nconst r = gsap.utils.random;\n\nfor (let i = 0; i < 10; i++) {\n  tl.to(".titulo", {\n    opacity: r(0.1, 1),\n    filter: \`blur(\${r(0, 6, 0.5)}px)\`,\n    x: r(-6, 6),\n    duration: 0.05, ease: "none"\n  });\n}\ntl.to(".titulo", { opacity: 1, filter: "blur(0px)", x: 0, duration: 0.15 });` },
+{ name:'Terminal', cat:'glitch', run: el => {
+    const t = '> ' + el.textContent; el.innerHTML = '<span class="tw"></span><span class="cursor">_</span>';
+    gsap.set(el, { color:css('--sky'), fontFamily:css('--f-mono'), fontWeight:500 });
+    return scramble(el.firstChild, t, { chars:'>_/\\|01', duration:1.6 }); },
+  code:`// Requiere ScrambleTextPlugin\nconst t = document.querySelector(".titulo");\ngsap.set(t, { color: "#7FC8FF", fontFamily: "monospace" });\ngsap.to(t, {\n  duration: 1.6,\n  scrambleText: { text: "> " + t.textContent, chars: ">_/\\\\|01" }\n});` },
+{ name:'Desenfoque a saltos', cat:'glitch', run: el => gsap.fromTo(el, { filter:'blur(14px)', opacity:.3 }, { filter:'blur(0px)', opacity:1, duration:1.2, ease:'steps(6)' }),
+  code:`gsap.fromTo(".titulo",\n  { filter: "blur(14px)", opacity: 0.3 },\n  { filter: "blur(0px)", opacity: 1, duration: 1.2, ease: "steps(6)" }\n);` },
+{ name:'Temblor digital', cat:'glitch', run: el => { const { chars } = split(el, 'chars');
+    return gsap.timeline().to(chars, { x:'random(-4, 4)', y:'random(-4, 4)', duration:.05, repeat:11, repeatRefresh:true, ease:'none' }).to(chars, { x:0, y:0, duration:.1 }); },
+  code:SPLIT('chars')+`gsap.timeline()\n  .to(split.chars, {\n    x: "random(-4, 4)",\n    y: "random(-4, 4)",\n    duration: 0.05,\n    repeat: 11,\n    repeatRefresh: true, // nuevo valor aleatorio en cada repetición\n    ease: "none"\n  })\n  .to(split.chars, { x: 0, y: 0, duration: 0.1 });` },
+
+/* Creativo */
+{ name:'Subrayado dibujado', cat:'creativo', run: el => gsap.timeline()
+    .set(el, { backgroundImage:`linear-gradient(${css('--hot')}, ${css('--hot')})`, backgroundRepeat:'no-repeat', backgroundPosition:'0% 100%', paddingBottom:8 })
+    .fromTo(el, { backgroundSize:'0% 6px' }, { backgroundSize:'100% 6px', duration:.9, ease:'power2.inOut' }),
+  code:`gsap.set(".titulo", {\n  backgroundImage: "linear-gradient(#FF6A4D, #FF6A4D)",\n  backgroundRepeat: "no-repeat",\n  backgroundPosition: "0% 100%",\n  paddingBottom: 8\n});\ngsap.fromTo(".titulo",\n  { backgroundSize: "0% 6px" },\n  { backgroundSize: "100% 6px", duration: 0.9, ease: "power2.inOut" }\n);` },
+{ name:'Bloque revelado', cat:'creativo', run: el => {
+    const t = el.textContent; el.textContent = '';
+    const inner = document.createElement('span'); inner.textContent = t; const blk = document.createElement('span'); blk.className = 'blk';
+    el.append(inner, blk); gsap.set(el, { position:'relative' });
+    return gsap.timeline().set(inner, { opacity:0 })
+      .fromTo(blk, { scaleX:0, transformOrigin:'0% 50%' }, { scaleX:1, duration:.45, ease:'power3.in' })
+      .set(inner, { opacity:1 }).set(blk, { transformOrigin:'100% 50%' })
+      .to(blk, { scaleX:0, duration:.45, ease:'power3.out' }); },
+  code:`const t = document.querySelector(".titulo");\nconst texto = document.createElement("span");\ntexto.textContent = t.textContent;\nconst bloque = document.createElement("span");\nbloque.style.cssText = "position:absolute;inset:0;background:#FF6A4D";\nt.textContent = "";\nt.style.position = "relative";\nt.append(texto, bloque);\n\ngsap.timeline()\n  .set(texto, { opacity: 0 })\n  .fromTo(bloque, { scaleX: 0, transformOrigin: "0% 50%" }, { scaleX: 1, duration: 0.45, ease: "power3.in" })\n  .set(texto, { opacity: 1 })\n  .set(bloque, { transformOrigin: "100% 50%" })\n  .to(bloque, { scaleX: 0, duration: 0.45, ease: "power3.out" });` },
+{ name:'Degradado animado', cat:'creativo', run: el => { el.classList.add('grad');
+    return gsap.fromTo(el, { backgroundPosition:'0% 50%' }, { backgroundPosition:'100% 50%', duration:2.5, ease:'sine.inOut', yoyo:true, repeat:1 }); },
+  code:`/* CSS */\n.titulo {\n  color: transparent;\n  background: linear-gradient(90deg, #F2EFE8, #FF6A4D, #7FC8FF, #F2EFE8);\n  background-size: 300% 100%;\n  background-clip: text;\n  -webkit-background-clip: text;\n}\n\n// JS\ngsap.fromTo(".titulo",\n  { backgroundPosition: "0% 50%" },\n  { backgroundPosition: "100% 50%", duration: 2.5, ease: "sine.inOut", yoyo: true, repeat: -1 }\n);` },
+{ name:'Contorno a relleno', cat:'creativo', run: el => { el.classList.add('stroke');
+    return gsap.fromTo(el, { color:'rgba(242,239,232,0)' }, { color:'rgba(242,239,232,1)', duration:1.2, delay:.3, ease:'power2.inOut' }); },
+  code:`/* CSS */\n.titulo {\n  -webkit-text-stroke: 1.5px #F2EFE8;\n}\n\n// JS\ngsap.fromTo(".titulo",\n  { color: "rgba(242,239,232,0)" },\n  { color: "rgba(242,239,232,1)", duration: 1.2, delay: 0.3, ease: "power2.inOut" }\n);` },
+{ name:'Eco', cat:'creativo', run: el => gsap.fromTo(el,
+    { x:-60, textShadow:'30px 0 0 rgba(255,106,77,.5), 60px 0 0 rgba(127,200,255,.3)' },
+    { x:0, textShadow:'0px 0 0 rgba(255,106,77,0), 0px 0 0 rgba(127,200,255,0)', duration:1.2, ease:'power3.out' }),
+  code:`gsap.fromTo(".titulo",\n  { x: -60, textShadow: "30px 0 0 rgba(255,106,77,.5), 60px 0 0 rgba(127,200,255,.3)" },\n  { x: 0, textShadow: "0px 0 0 rgba(255,106,77,0), 0px 0 0 rgba(127,200,255,0)", duration: 1.2, ease: "power3.out" }\n);` },
+
+/* Párrafo */
+{ name:'Palabras con máscara', cat:'parrafo', text:P3, run: el => { const { words } = split(el, 'words');
+    words.forEach(w => { const m = document.createElement('span'); m.className = 'mask'; w.replaceWith(m); m.appendChild(w); });
+    return gsap.fromTo(words, { yPercent:110 }, { yPercent:0, stagger:.025, duration:.6, ease:'power3.out' }); },
+  code:`const split = SplitText.create(".titulo", { type: "words", mask: "words" });\ngsap.from(split.words, {\n  yPercent: 110,\n  stagger: 0.025,\n  duration: 0.6,\n  ease: "power3.out"\n});` },
+{ name:'Letra a letra', cat:'parrafo', text:P2, run: el => gsap.from(split(el,'chars').chars, { opacity:0, stagger:.012, duration:.2, ease:'none' }),
+  code:SPLIT('chars')+`gsap.from(split.chars, {\n  opacity: 0,\n  stagger: 0.012,\n  duration: 0.2,\n  ease: "none"\n});` },
+{ name:'Líneas alternas', cat:'parrafo', text:P3, run: el => { const tl = gsap.timeline();
+    lines(el).forEach((ws, i) => tl.from(ws, { x:i % 2 ? 60 : -60, opacity:0, duration:.8, ease:'power3.out' }, i * .12)); return tl; },
+  code:SPLIT('lines')+`gsap.from(split.lines, {\n  x: i => (i % 2 ? 60 : -60),\n  opacity: 0,\n  stagger: 0.12,\n  duration: 0.8,\n  ease: "power3.out"\n});` },
+{ name:'Karaoke', cat:'parrafo', text:P1, run: el => { const { words } = split(el, 'words');
+    return gsap.timeline().to(words, { color:css('--hot'), stagger:.12, duration:.1 }).to(words, { color:css('--stage-fg'), stagger:.12, duration:.5 }, .3); },
+  code:SPLIT('words')+`gsap.timeline()\n  .to(split.words, { color: "#FF6A4D", stagger: 0.12, duration: 0.1 })\n  .to(split.words, { color: "#F2EFE8", stagger: 0.12, duration: 0.5 }, 0.3);` },
+
+/* Scroll */
+{ name:'Escala con scroll', cat:'scroll', scroll:true, run: (el, st) => gsap.fromTo(el, { scale:.4, opacity:.2 }, { scale:1, opacity:1, ease:'none', scrollTrigger:{ trigger:st, start:'top bottom', end:'center 35%', scrub:true } }),
+  code:`gsap.fromTo(".titulo", { scale: 0.4, opacity: 0.2 }, {\n  scale: 1,\n  opacity: 1,\n  ease: "none",\n  scrollTrigger: { trigger: ".titulo", start: "top bottom", end: "center 35%", scrub: true }\n});` },
+{ name:'Horizontal con scroll', cat:'scroll', scroll:true, run: (el, st) => gsap.fromTo(el, { x:140 }, { x:-140, ease:'none', scrollTrigger:{ trigger:st, start:'top bottom', end:'bottom top', scrub:true } }),
+  code:`gsap.fromTo(".titulo", { x: 140 }, {\n  x: -140,\n  ease: "none",\n  scrollTrigger: { trigger: ".titulo", start: "top bottom", end: "bottom top", scrub: true }\n});` },
+{ name:'Contador con scroll', cat:'scroll', scroll:true, text:'0%', run: (el, st) => { const o = { v:0 };
+    return gsap.to(o, { v:100, ease:'none', onUpdate(){ el.textContent = Math.round(o.v) + '%'; }, scrollTrigger:{ trigger:st, start:'top 90%', end:'bottom 30%', scrub:true } }); },
+  code:`const t = document.querySelector(".titulo");\nconst n = { v: 0 };\ngsap.to(n, {\n  v: 100,\n  ease: "none",\n  onUpdate: () => (t.textContent = Math.round(n.v) + "%"),\n  scrollTrigger: { trigger: ".titulo", start: "top 90%", end: "bottom 30%", scrub: true }\n});` },
+
+/* Interactivo */
+{ name:'Seguir el ratón', cat:'interactivo', live:true, hint:'Mueve el ratón por aquí', run: (el, st) => {
+    const xTo = gsap.quickTo(el, 'x', { duration:.5, ease:'power3' }), yTo = gsap.quickTo(el, 'y', { duration:.5, ease:'power3' });
+    return live(st, { pointermove: e => { const r = st.getBoundingClientRect(); xTo((e.clientX - r.left - r.width / 2) * .25); yTo((e.clientY - r.top - r.height / 2) * .25); },
+                      pointerleave: () => { xTo(0); yTo(0); } }); },
+  code:`const escena = document.querySelector(".escenario");\nconst xTo = gsap.quickTo(".titulo", "x", { duration: 0.5, ease: "power3" });\nconst yTo = gsap.quickTo(".titulo", "y", { duration: 0.5, ease: "power3" });\n\nescena.addEventListener("pointermove", e => {\n  const r = escena.getBoundingClientRect();\n  xTo((e.clientX - r.left - r.width / 2) * 0.25);\n  yTo((e.clientY - r.top - r.height / 2) * 0.25);\n});\nescena.addEventListener("pointerleave", () => { xTo(0); yTo(0); });` },
+{ name:'Repulsión', cat:'interactivo', live:true, hint:'Acerca el ratón a las letras', run: (el, st) => { const { chars } = split(el, 'chars');
+    return live(st, { pointermove: e => chars.forEach(c => { const b = c.getBoundingClientRect(); const dx = b.left + b.width / 2 - e.clientX, dy = b.top + b.height / 2 - e.clientY; const d = Math.hypot(dx, dy) || 1; const f = Math.max(0, 110 - d) / 110; gsap.to(c, { x:dx / d * f * 40, y:dy / d * f * 40, duration:.3, overwrite:'auto' }); }),
+                      pointerleave: () => gsap.to(chars, { x:0, y:0, duration:.8, ease:'elastic.out(1, 0.4)', overwrite:'auto' }) }); },
+  code:SPLIT('chars')+`const escena = document.querySelector(".escenario");\n\nescena.addEventListener("pointermove", e => {\n  split.chars.forEach(c => {\n    const b = c.getBoundingClientRect();\n    const dx = b.left + b.width / 2 - e.clientX;\n    const dy = b.top + b.height / 2 - e.clientY;\n    const d = Math.hypot(dx, dy) || 1;\n    const fuerza = Math.max(0, 110 - d) / 110;\n    gsap.to(c, { x: dx / d * fuerza * 40, y: dy / d * fuerza * 40, duration: 0.3, overwrite: "auto" });\n  });\n});\nescena.addEventListener("pointerleave", () => {\n  gsap.to(split.chars, { x: 0, y: 0, duration: 0.8, ease: "elastic.out(1, 0.4)" });\n});` },
+{ name:'Inclinación 3D', cat:'interactivo', live:true, hint:'Mueve el ratón por aquí', run: (el, st) => {
+    gsap.set(el, { transformPerspective:600 });
+    const rx = gsap.quickTo(el, 'rotationX', { duration:.4, ease:'power3' }), ry = gsap.quickTo(el, 'rotationY', { duration:.4, ease:'power3' });
+    return live(st, { pointermove: e => { const r = st.getBoundingClientRect(); ry(((e.clientX - r.left) / r.width - .5) * 50); rx(-((e.clientY - r.top) / r.height - .5) * 50); },
+                      pointerleave: () => { rx(0); ry(0); } }); },
+  code:`const escena = document.querySelector(".escenario");\ngsap.set(".titulo", { transformPerspective: 600 });\nconst rx = gsap.quickTo(".titulo", "rotationX", { duration: 0.4, ease: "power3" });\nconst ry = gsap.quickTo(".titulo", "rotationY", { duration: 0.4, ease: "power3" });\n\nescena.addEventListener("pointermove", e => {\n  const r = escena.getBoundingClientRect();\n  ry(((e.clientX - r.left) / r.width - 0.5) * 50);\n  rx(-((e.clientY - r.top) / r.height - 0.5) * 50);\n});\nescena.addEventListener("pointerleave", () => { rx(0); ry(0); });` },
+{ name:'Lupa', cat:'interactivo', live:true, hint:'Pasa el ratón sobre las letras', run: (el, st) => { const { chars } = split(el, 'chars');
+    gsap.set(chars, { transformOrigin:'50% 100%' });
+    return live(st, { pointermove: e => chars.forEach(c => { const b = c.getBoundingClientRect(); const d = Math.abs(b.left + b.width / 2 - e.clientX); const s = 1 + Math.max(0, 1 - d / 90) * .8; gsap.to(c, { scale:s, y:-(s - 1) * 20, duration:.2, overwrite:'auto' }); }),
+                      pointerleave: () => gsap.to(chars, { scale:1, y:0, duration:.4, overwrite:'auto' }) }); },
+  code:SPLIT('chars')+`const escena = document.querySelector(".escenario");\ngsap.set(split.chars, { transformOrigin: "50% 100%" });\n\nescena.addEventListener("pointermove", e => {\n  split.chars.forEach(c => {\n    const b = c.getBoundingClientRect();\n    const d = Math.abs(b.left + b.width / 2 - e.clientX);\n    const s = 1 + Math.max(0, 1 - d / 90) * 0.8;\n    gsap.to(c, { scale: s, y: -(s - 1) * 20, duration: 0.2, overwrite: "auto" });\n  });\n});\nescena.addEventListener("pointerleave", () => {\n  gsap.to(split.chars, { scale: 1, y: 0, duration: 0.4 });\n});` },
+{ name:'Clic para explotar', cat:'interactivo', live:true, hint:'Haz clic o toca aquí', run: (el, st) => { const { chars } = split(el, 'chars'); let tl;
+    return live(st, { pointerdown: () => { if (tl && tl.isActive()) return;
+      tl = gsap.timeline().to(chars, { x:'random(-160, 160)', y:'random(-120, 120)', rotation:'random(-180, 180)', opacity:0, duration:.6, ease:'power3.out' })
+        .to(chars, { x:0, y:0, rotation:0, opacity:1, duration:.9, ease:'elastic.out(1, 0.5)', stagger:.02 }, '+=0.2'); } }); },
+  code:SPLIT('chars')+`const escena = document.querySelector(".escenario");\nlet tl;\n\nescena.addEventListener("pointerdown", () => {\n  if (tl && tl.isActive()) return;\n  tl = gsap.timeline()\n    .to(split.chars, { x: "random(-160, 160)", y: "random(-120, 120)", rotation: "random(-180, 180)", opacity: 0, duration: 0.6, ease: "power3.out" })\n    .to(split.chars, { x: 0, y: 0, rotation: 0, opacity: 1, duration: 0.9, ease: "elastic.out(1, 0.5)", stagger: 0.02 }, "+=0.2");\n});` },
+
 ];
 
 /* ---------- render ---------- */
@@ -472,13 +618,13 @@ try { favs = new Set(JSON.parse(localStorage.getItem('tipomotor-favs') || '[]'))
 const saveFavs = () => { try { localStorage.setItem('tipomotor-favs', JSON.stringify([...favs])); } catch (_) {} };
 CATS.push(['favs', '★ Favoritos']);
 FX.forEach((fx, i) => {
-  fx.custom = fx.cat !== 'parrafo' && !['Paralaje', 'Contador', 'Cambio de palabra', 'Escribir y borrar'].includes(fx.name);
+  fx.custom = fx.cat !== 'parrafo' && !['Paralaje', 'Contador', 'Cambio de palabra', 'Escribir y borrar', 'Contador con scroll'].includes(fx.name);
   fx.text = fx.text || fx.name;
   const n = String(i + 1).padStart(2, '0');
   const card = document.createElement('article');
   card.className = 'card'; card.dataset.cat = fx.cat; card.dataset.name = fx.name.toLowerCase();
   card.innerHTML = `
-    <div class="stage" data-n="${n}"><div class="target${fx.cat === 'parrafo' || (fx.scroll && fx.text.length > 40) ? ' p' : ''}"></div>${fx.scroll ? '<span class="hint">Se mueve al hacer scroll</span>' : ''}</div>
+    <div class="stage" data-n="${n}"><div class="target${fx.cat === 'parrafo' || (fx.scroll && fx.text.length > 40) ? ' p' : ''}"></div>${fx.scroll || fx.hint ? `<span class="hint">${fx.hint || 'Se mueve al hacer scroll'}</span>` : ''}</div>
     <div class="meta"><h3>${fx.name}</h3><div class="r"><span class="tag">${catLabel[fx.cat]}</span><button class="fav" data-a="fav" aria-pressed="${favs.has(fx.name)}" aria-label="Guardar ${fx.name} en favoritos">${favs.has(fx.name) ? '★' : '☆'}</button></div></div>
     <div class="actions">
       <button class="btn primary" data-a="play" aria-label="Repetir ${fx.name}">↻ Repetir</button>
@@ -504,7 +650,8 @@ function reset(fx, st, prev){
   const el = st.querySelector('.target');
   if (prev){ prev.scrollTrigger && prev.scrollTrigger.kill(); prev.kill(); }
   gsap.set([st, el], { clearProps:'all' });
-  el.classList.remove('fill');
+  gsap.killTweensOf([el, ...el.querySelectorAll('*')]);
+  el.classList.remove('fill', 'grad', 'stroke');
   el.textContent = txt(fx);
   return el;
 }
@@ -518,13 +665,13 @@ if (!reduce && 'IntersectionObserver' in window){
   io = new IntersectionObserver(es => es.forEach(e => {
     /* se repite cada vez que la tarjeta vuelve a entrar en pantalla */
     const fx = e.target._fx;
-    if (e.isIntersecting && !fx.scroll && !(fx.anim && fx.anim.isActive())) play(fx);
+    if (e.isIntersecting && !fx.scroll && !fx.live && !(fx.anim && fx.anim.isActive())) play(fx);
   }), { threshold:.45 });
   FX.forEach(fx => io.observe(fx.card));
 }
 /* y al pasar el ratón por el escenario */
 if (matchMedia('(hover: hover)').matches){
-  FX.filter(f => !f.scroll).forEach(fx => fx.card.querySelector('.stage').addEventListener('mouseenter', () => {
+  FX.filter(f => !f.scroll && !f.live).forEach(fx => fx.card.querySelector('.stage').addEventListener('mouseenter', () => {
     if (!(fx.anim && fx.anim.isActive())) play(fx);
   }));
 }
@@ -589,12 +736,12 @@ document.getElementById('mitexto').addEventListener('input', e => {
   clearTimeout(tCustom);
   tCustom = setTimeout(() => {
     custom = e.target.value.trim();
-    FX.filter(f => f.custom && !f.scroll).forEach(fx => {
+    FX.filter(f => f.custom && !f.scroll && !f.live).forEach(fx => {
       if (fx.card.hidden) return;
       if (onScreen(fx.card)) play(fx);
       else { reset(fx, fx.card.querySelector('.stage'), fx.anim); fx.anim = null; fx.played = false; if (io) io.observe(fx.card); }
     });
-    FX.filter(f => f.custom && f.scroll).forEach(play);
+    FX.filter(f => f.custom && (f.scroll || f.live)).forEach(play);
     if (vfx && dlg.open) vanim = runIn(vfx, vst, vanim);
   }, 350);
 });
@@ -613,7 +760,7 @@ setSpeed(speed);
 
 /* repetir los visibles */
 document.getElementById('replay-all').addEventListener('click', () => {
-  let n = 0; FX.forEach(fx => { if (!fx.scroll && !fx.card.hidden && onScreen(fx.card)){ play(fx); n++; } });
+  let n = 0; FX.forEach(fx => { if (!fx.scroll && !fx.live && !fx.card.hidden && onScreen(fx.card)){ play(fx); n++; } });
   say(n ? `Repitiendo ${n} efecto${n > 1 ? 's' : ''}` : 'No hay efectos en pantalla');
 });
 
@@ -637,7 +784,7 @@ dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
 dlg.addEventListener('close', () => { if (vanim){ vanim.kill(); vanim = null; } });
 
 /* los efectos de scroll se preparan desde el principio */
-FX.filter(f => f.scroll).forEach(play);
+FX.filter(f => f.scroll || f.live).forEach(play);
 
 /* descargar un HTML que funciona solo */
 function downloadHtml(fx){
