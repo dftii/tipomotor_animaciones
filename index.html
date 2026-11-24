@@ -123,7 +123,12 @@ dialog#vista::backdrop{background:rgba(8,11,23,.72); backdrop-filter:blur(4px)}
 .btn.primary{background:var(--primary); border-color:var(--primary); color:var(--primary-fg)}
 .btn[aria-expanded="true"]{background:var(--chip)}
 .code{border-top:1px solid var(--line); background:var(--code-bg); min-width:0}
-.code pre{margin:0; padding:16px; overflow-x:auto; font-family:var(--f-mono); font-size:.8rem; line-height:1.6; color:var(--code-fg)}
+.code-bar{display:flex; flex-wrap:wrap; gap:8px; padding:12px 16px 0}
+.code-bar .btn{color:var(--code-fg); border-color:rgba(215,222,245,.22); font-size:.78rem; padding:5px 10px}
+.code-bar .btn:hover{border-color:var(--code-fg)}
+.card:target{outline:2px solid var(--hot); outline-offset:3px}
+.theme-btn{font:inherit; font-size:.85rem; font-weight:550; color:var(--fg); border:1px solid var(--line); background:var(--surface); padding:6px 12px; border-radius:999px; cursor:pointer}
+.code pre{margin:0;padding:16px; overflow-x:auto; font-family:var(--f-mono); font-size:.8rem; line-height:1.6; color:var(--code-fg)}
 .code .s{color:var(--code-str)} .code .k{color:var(--sky)} .code .cm{color:var(--code-com)}
 .empty{grid-column:1/-1; padding:48px 0; text-align:center; color:var(--muted)}
 
@@ -151,6 +156,7 @@ dialog#vista::backdrop{background:rgba(8,11,23,.72); backdrop-filter:blur(4px)}
       <div class="links">
         <a href="https://dftii.github.io/tipomotor_animaciones/" target="_blank" rel="noopener">Web en GitHub Pages ↗</a>
         <a href="https://github.com/dftii/tipomotor_animaciones" target="_blank" rel="noopener">Código en GitHub ↗</a>
+        <button class="theme-btn" id="tema" type="button" aria-label="Cambiar tema">◐ Tema</button>
       </div>
     </div>
     <h1 id="logo">Tipomotor<span class="dot">.</span></h1>
@@ -186,10 +192,12 @@ dialog#vista::backdrop{background:rgba(8,11,23,.72); backdrop-filter:blur(4px)}
     <div class="steps">
       <div class="step">
         <h3>Carga GSAP</h3>
-        <p>Pega estas líneas antes de cerrar <code>&lt;/body&gt;</code>. Desde la versión 3.13, SplitText es gratuito.</p>
+        <p>Pega estas líneas antes de cerrar <code>&lt;/body&gt;</code>. Desde la versión 3.13 todos estos plugins son gratuitos. O pulsa <em>Descargar HTML</em> en el código de un efecto y tendrás un archivo que ya funciona.</p>
         <pre>&lt;script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"&gt;&lt;/script&gt;
 &lt;script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/SplitText.min.js"&gt;&lt;/script&gt;
-&lt;script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"&gt;&lt;/script&gt;</pre>
+&lt;script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"&gt;&lt;/script&gt;
+&lt;script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/TextPlugin.min.js"&gt;&lt;/script&gt;
+&lt;script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrambleTextPlugin.min.js"&gt;&lt;/script&gt;</pre>
       </div>
       <div class="step">
         <h3>Marca tu texto</h3>
@@ -199,7 +207,7 @@ dialog#vista::backdrop{background:rgba(8,11,23,.72); backdrop-filter:blur(4px)}
       <div class="step">
         <h3>Pega el código</h3>
         <p>Registra los plugins una vez y después pega el código del efecto que hayas copiado.</p>
-        <pre>gsap.registerPlugin(SplitText, ScrollTrigger);
+        <pre>gsap.registerPlugin(SplitText, ScrollTrigger, TextPlugin, ScrambleTextPlugin);
 
 // …aquí el código copiado…</pre>
       </div>
@@ -451,6 +459,7 @@ const FX = [
 /* ---------- render ---------- */
 const grid = document.getElementById('grid');
 const catLabel = Object.fromEntries(CATS);
+const slug = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 function highlight(code){
   return esc(code)
@@ -477,7 +486,11 @@ FX.forEach((fx, i) => {
       <button class="btn" data-a="copy">Copiar</button>
       ${fx.scroll ? '' : '<button class="btn" data-a="zoom">⤢ Ampliar</button>'}
     </div>
-    <div class="code" hidden><pre><code>${highlight(fx.code)}</code></pre></div>`;
+    <div class="code" hidden>
+      <div class="code-bar">${fx.name === 'Paralaje' ? '' : '<button class="btn sm" data-a="html">⇩ Descargar HTML</button>'}<button class="btn sm" data-a="link">🔗 Copiar enlace</button></div>
+      <pre><code>${highlight(fx.code)}</code></pre>
+    </div>`;
+  card.id = slug(fx.name);
   card.querySelector('.target').textContent = fx.text;
   fx.card = card; card._fx = fx;
   grid.appendChild(card);
@@ -503,9 +516,17 @@ const onScreen = el => { const r = el.getBoundingClientRect(); return r.bottom >
 let io = null;
 if (!reduce && 'IntersectionObserver' in window){
   io = new IntersectionObserver(es => es.forEach(e => {
-    if (e.isIntersecting){ const fx = e.target._fx; io.unobserve(e.target); if (!fx.played) play(fx); }
+    /* se repite cada vez que la tarjeta vuelve a entrar en pantalla */
+    const fx = e.target._fx;
+    if (e.isIntersecting && !fx.scroll && !(fx.anim && fx.anim.isActive())) play(fx);
   }), { threshold:.45 });
   FX.forEach(fx => io.observe(fx.card));
+}
+/* y al pasar el ratón por el escenario */
+if (matchMedia('(hover: hover)').matches){
+  FX.filter(f => !f.scroll).forEach(fx => fx.card.querySelector('.stage').addEventListener('mouseenter', () => {
+    if (!(fx.anim && fx.anim.isActive())) play(fx);
+  }));
 }
 
 /* botones */
@@ -521,6 +542,11 @@ grid.addEventListener('click', e => {
     apply();
   }
   if (b.dataset.a === 'zoom') openView(fx);
+  if (b.dataset.a === 'html') downloadHtml(fx);
+  if (b.dataset.a === 'link'){
+    const url = location.href.split('#')[0] + '#' + card.id;
+    try { navigator.clipboard.writeText(url).then(() => say('Enlace copiado'), () => say(url)); } catch (_) { say(url); }
+  }
   if (b.dataset.a === 'play'){ play(fx); if (fx.scroll){ ScrollTrigger.refresh(); say('Desplázate para ver el efecto'); } }
   if (b.dataset.a === 'code'){ box.hidden = !box.hidden; b.setAttribute('aria-expanded', String(!box.hidden)); b.textContent = box.hidden ? 'Código' : 'Ocultar'; }
   if (b.dataset.a === 'copy'){
@@ -612,6 +638,81 @@ dlg.addEventListener('close', () => { if (vanim){ vanim.kill(); vanim = null; } 
 
 /* los efectos de scroll se preparan desde el principio */
 FX.filter(f => f.scroll).forEach(play);
+
+/* descargar un HTML que funciona solo */
+function downloadHtml(fx){
+  const page = buildHtml(fx);
+  try {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([page], { type:'text/html' }));
+    a.download = slug(fx.name) + '.html'; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    say('Descargado ' + a.download + ': ábrelo en el navegador');
+  } catch (_) { say('No se pudo descargar. Usa Copiar.'); }
+}
+function buildHtml(fx){
+  let css = '', js = fx.code;
+  if (js.startsWith('/* CSS */')){ const parts = js.split('\n\n// JS\n'); css = parts[0].replace('/* CSS */\n', ''); js = parts[1] || ''; }
+  const tag = fx.cat === 'parrafo' ? 'p' : 'h1';
+  let inner = esc(txt(fx));
+  if (fx.name === 'Cambio de palabra'){ inner = 'Texto <span class="caja"><span class="palabra">vivo</span></span>'; css += '\n.caja { display:inline-block; overflow:hidden; vertical-align:bottom; color:#FF6A4D }\n.palabra { display:inline-block }'; }
+  if (fx.name === 'Marcador') inner = 'Un buen efecto dura menos de un segundo y <span class="marca">acompaña al contenido</span> sin robarle protagonismo.';
+  if (fx.name === 'Máquina de escribir') inner = '';
+  const spacer = fx.scroll ? '<div style="height:110vh;display:grid;place-items:center;opacity:.5">Baja para ver el efecto ↓</div>' : '';
+  const cdn = 'https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/';
+  const page = `<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${fx.name} · Tipomotor</title>
+<style>
+body { margin:0; background:#141A2E; color:#F2EFE8; font-family:system-ui, sans-serif }
+.escenario { min-height:100vh; display:grid; place-items:center; padding:24px; overflow:hidden }
+h1.titulo { font-size:clamp(2.2rem, 9vw, 5.5rem); margin:0; text-align:center; letter-spacing:-.02em }
+p.titulo { font-size:1.4rem; line-height:1.6; max-width:34ch; margin:0 }
+.barra { position:absolute; inset:.12em -.12em .08em; background:#F2EFE8; transform-origin:right center }
+${css}
+</style>
+</head>
+<body>
+${spacer}<div class="escenario">
+  <${tag} class="titulo">${inner}</${tag}>
+</div>${spacer}
+<script src="${cdn}gsap.min.js"><\/script>
+<script src="${cdn}SplitText.min.js"><\/script>
+<script src="${cdn}ScrollTrigger.min.js"><\/script>
+<script src="${cdn}TextPlugin.min.js"><\/script>
+<script src="${cdn}ScrambleTextPlugin.min.js"><\/script>
+<script>
+gsap.registerPlugin(SplitText, ScrollTrigger, TextPlugin, ScrambleTextPlugin);
+document.fonts.ready.then(() => {
+${js}
+});
+<\/script>
+</body>
+</html>
+`;
+  return page;
+}
+
+/* tema claro / oscuro */
+const root = document.documentElement;
+try { const t = localStorage.getItem('tipomotor-tema'); if (t) root.dataset.theme = t; } catch (_) {}
+document.getElementById('tema').addEventListener('click', () => {
+  const dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  root.dataset.theme = dark ? 'light' : 'dark';
+  try { localStorage.setItem('tipomotor-tema', root.dataset.theme); } catch (_) {}
+  say(dark ? 'Tema claro' : 'Tema oscuro');
+});
+
+/* abrir un efecto desde un enlace compartido (#nombre-del-efecto) */
+function fromHash(){
+  const fx = FX.find(f => f.card.id === location.hash.slice(1));
+  if (fx){ fx.card.scrollIntoView({ block:'center' }); if (!fx.scroll) setTimeout(() => openView(fx), 300); }
+}
+window.addEventListener('hashchange', fromHash);
+fromHash();
 
 /* entrada del logo */
 if (!reduce){
